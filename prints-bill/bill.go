@@ -22,7 +22,7 @@ type Invoice struct {
 	Performances []Performance `json:"performances"`
 }
 
-func amountFor(play Play, perf Performance) float64 {
+func (play Play) amountFor(perf Performance) float64 {
 	result := 0.0
 
 	switch play.Type {
@@ -43,7 +43,7 @@ func amountFor(play Play, perf Performance) float64 {
 	return result
 }
 
-func volumeCreditsFor(play Play, perf Performance) float64 {
+func (play Play) volumeCreditsFor(perf Performance) float64 {
 	result := math.Max(float64(perf.Audience-30), 0)
 	if "comedy" == play.Type {
 		result += math.Floor(float64(perf.Audience / 5))
@@ -51,52 +51,21 @@ func volumeCreditsFor(play Play, perf Performance) float64 {
 	return result
 }
 
-func totalAmountFor(performances []Performance, plays Plays) float64 {
-	result := 0.0
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		result += amountFor(play, perf)
-	}
-	return result
-}
-
-func totalVolumeCreditsFor(performances []Performance, plays Plays) float64 {
-	result := 0.0
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		result += volumeCreditsFor(play, perf)
-	}
-	return result
-}
-
 type Rate struct {
-	Name     string
-	Amount   float64
-	Audience int
+	Amount       float64
+	VolumeCredit float64
+	Audience     int
+	Name         string
 }
 
 type Bill struct {
 	Customer           string
+	Rates              []Rate
 	TotalAmount        float64
 	TotalVolumeCredits float64
-	Rates              []Rate
 }
 
-func ratesFor(performances []Performance, plays Plays) []Rate {
-	var result []Rate
-	for _, perf := range performances {
-		play := plays[perf.PlayID]
-		rate := Rate{
-			Name:     play.Name,
-			Amount:   amountFor(play, perf),
-			Audience: perf.Audience,
-		}
-		result = append(result, rate)
-	}
-	return result
-}
-
-func renderText(bill Bill) string {
+func (bill Bill) renderText() string {
 	result := fmt.Sprintf("Statement for %s\n", bill.Customer)
 	for _, r := range bill.Rates {
 		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", r.Name, r.Amount/100, r.Audience)
@@ -107,16 +76,39 @@ func renderText(bill Bill) string {
 	return result
 }
 
-func statement(invoice Invoice, plays Plays) string {
+func totalAmountFor(rates []Rate) (amounts float64) {
+	for _, r := range rates {
+		amounts += r.Amount
+	}
+	return
+}
 
+func totalVolumeCreditsFor(rates []Rate) (credit float64) {
+	for _, r := range rates {
+		credit += r.VolumeCredit
+	}
+	return
+}
+
+func statement(invoice Invoice, plays Plays) string {
+	rates := []Rate{}
+	for _, perf := range invoice.Performances {
+		play := plays[perf.PlayID]
+		rates = append(rates, Rate{
+			Amount:       play.amountFor(perf),
+			VolumeCredit: play.volumeCreditsFor(perf),
+			Name:         play.Name,
+			Audience:     perf.Audience,
+		})
+	}
 	bill := Bill{
 		Customer:           invoice.Customer,
-		TotalAmount:        totalAmountFor(invoice.Performances, plays),
-		TotalVolumeCredits: totalVolumeCreditsFor(invoice.Performances, plays),
-		Rates:              ratesFor(invoice.Performances, plays),
+		Rates:              rates,
+		TotalAmount:        totalAmountFor(rates),
+		TotalVolumeCredits: totalVolumeCreditsFor(rates),
 	}
 
-	return renderText(bill)
+	return bill.renderText()
 }
 
 func main() {
