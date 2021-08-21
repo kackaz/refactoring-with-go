@@ -43,6 +43,14 @@ func amountFor(play Play, perf Performance) float64 {
 	return result
 }
 
+func volumeCreditsFor(play Play, perf Performance) float64 {
+	volumeCredits := math.Max(float64(perf.Audience-30), 0)
+	if "comedy" == play.Type {
+		volumeCredits += math.Floor(float64(perf.Audience / 5))
+	}
+	return volumeCredits
+}
+
 func statement(invoice Invoice, plays Plays) string {
 	totalAmount := 0.0
 	volumeCredits := 0.0
@@ -52,12 +60,7 @@ func statement(invoice Invoice, plays Plays) string {
 		play := plays[perf.PlayID]
 		totalAmount += amountFor(play, perf)
 
-		// add volume credits
-		volumeCredits += math.Max(float64(perf.Audience-30), 0)
-		// add extra credit for every ten comedy attendees
-		if "comedy" == play.Type {
-			volumeCredits += math.Floor(float64(perf.Audience / 5))
-		}
+		volumeCredits += volumeCreditsFor(play, perf)
 
 		// print line for this order
 		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, amountFor(play, perf)/100, perf.Audience)
@@ -76,7 +79,7 @@ func main() {
 			{PlayID: "as-like", Audience: 35},
 			{PlayID: "othello", Audience: 40},
 		}}
-	plays := map[string]Play{
+	plays := Plays{
 		"hamlet":  {Name: "Hamlet", Type: "tragedy"},
 		"as-like": {Name: "As You Like It", Type: "comedy"},
 		"othello": {Name: "Othello", Type: "tragedy"},
