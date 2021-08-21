@@ -96,6 +96,17 @@ func ratesFor(performances []Performance, plays Plays) []Rate {
 	return result
 }
 
+func renderText(bill Bill) string {
+	result := fmt.Sprintf("Statement for %s\n", bill.Customer)
+	for _, r := range bill.Rates {
+		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", r.Name, r.Amount/100, r.Audience)
+	}
+
+	result += fmt.Sprintf("Amount owed is $%.2f\n", bill.TotalAmount/100)
+	result += fmt.Sprintf("you earned %.0f credits\n", bill.TotalVolumeCredits)
+	return result
+}
+
 func statement(invoice Invoice, plays Plays) string {
 
 	bill := Bill{
@@ -105,14 +116,7 @@ func statement(invoice Invoice, plays Plays) string {
 		Rates:              ratesFor(invoice.Performances, plays),
 	}
 
-	result := fmt.Sprintf("Statement for %s\n", bill.Customer)
-	for _, r := range bill.Rates {
-		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", r.Name, r.Amount/100, r.Audience)
-	}
-
-	result += fmt.Sprintf("Amount owed is $%.2f\n", bill.TotalAmount/100)
-	result += fmt.Sprintf("you earned %.0f credits\n", bill.TotalVolumeCredits)
-	return result
+	return renderText(bill)
 }
 
 func main() {
