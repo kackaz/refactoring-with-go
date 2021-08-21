@@ -51,21 +51,35 @@ func volumeCreditsFor(play Play, perf Performance) float64 {
 	return volumeCredits
 }
 
-func statement(invoice Invoice, plays Plays) string {
+func totalAmountFor(performances []Performance, plays Plays) float64 {
 	totalAmount := 0.0
+	for _, perf := range performances {
+		play := plays[perf.PlayID]
+		totalAmount += amountFor(play, perf)
+	}
+	return totalAmount
+}
+
+func statement(invoice Invoice, plays Plays) string {
+	totalAmount := totalAmountFor(invoice.Performances, plays)
 	volumeCredits := 0.0
 	result := fmt.Sprintf("Statement for %s\n", invoice.Customer)
 
+	// for _, perf := range invoice.Performances {
+	// 	play := plays[perf.PlayID]
+	// 	totalAmount += amountFor(play, perf)
+	// }
+
 	for _, perf := range invoice.Performances {
 		play := plays[perf.PlayID]
-		totalAmount += amountFor(play, perf)
-
 		volumeCredits += volumeCreditsFor(play, perf)
-
-		// print line for this order
-		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, amountFor(play, perf)/100, perf.Audience)
-
 	}
+
+	for _, perf := range invoice.Performances {
+		play := plays[perf.PlayID]
+		result += fmt.Sprintf("  %s: $%.2f (%d seats)\n", play.Name, amountFor(play, perf)/100, perf.Audience)
+	}
+
 	result += fmt.Sprintf("Amount owed is $%.2f\n", totalAmount/100)
 	result += fmt.Sprintf("you earned %.0f credits\n", volumeCredits)
 	return result
