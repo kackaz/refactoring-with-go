@@ -5,54 +5,139 @@ type Item struct {
 	sellIn, quality int
 }
 
-func UpdateQuality(items []*Item) {
-	for i := 0; i < len(items); i++ {
+func quality(item Item, q int) Item {
+	item.quality += q
+	if item.quality > 50 {
+		item.quality = 50
+		return item
+	}
+	if item.quality < 0 {
+		item.quality = 0
+		return item
+	}
+	return item
+}
 
-		if items[i].name != "Aged Brie" && items[i].name != "Backstage passes to a TAFKAL80ETC concert" {
-			if items[i].quality > 0 {
-				if items[i].name != "Sulfuras, Hand of Ragnaros" {
-					items[i].quality = items[i].quality - 1
-				}
-			}
-		} else {
-			if items[i].quality < 50 {
-				items[i].quality = items[i].quality + 1
-				if items[i].name == "Backstage passes to a TAFKAL80ETC concert" {
-					if items[i].sellIn < 11 {
-						if items[i].quality < 50 {
-							items[i].quality = items[i].quality + 1
-						}
-					}
-					if items[i].sellIn < 6 {
-						if items[i].quality < 50 {
-							items[i].quality = items[i].quality + 1
-						}
-					}
-				}
-			}
-		}
+type AgedBrie struct {
+	item Item
+}
 
-		if items[i].name != "Sulfuras, Hand of Ragnaros" {
-			items[i].sellIn = items[i].sellIn - 1
-		}
+func (ab AgedBrie) qualify() Genre {
+	item := ab.item
+	item = quality(item, 1)
+	return AgedBrie{item: item}
+}
 
-		if items[i].sellIn < 0 {
-			if items[i].name != "Aged Brie" {
-				if items[i].name != "Backstage passes to a TAFKAL80ETC concert" {
-					if items[i].quality > 0 {
-						if items[i].name != "Sulfuras, Hand of Ragnaros" {
-							items[i].quality = items[i].quality - 1
-						}
-					}
-				} else {
-					items[i].quality = items[i].quality - items[i].quality
-				}
-			} else {
-				if items[i].quality < 50 {
-					items[i].quality = items[i].quality + 1
-				}
-			}
-		}
+func (ab AgedBrie) updateSellIn() Genre {
+	item := ab.item
+	item.sellIn = item.sellIn - 1
+	return AgedBrie{item: item}
+}
+
+func (ab AgedBrie) update() Item {
+	item := ab.item
+	if item.sellIn < 0 {
+		item = quality(item, 1)
+	}
+	return item
+}
+
+type Backstage struct {
+	item Item
+}
+
+func (bs Backstage) qualify() Genre {
+	item := bs.item
+	if item.sellIn > 10 {
+		item = quality(item, 1)
 	}
 
+	if item.sellIn > 5 && item.sellIn <= 10 {
+		item = quality(item, 2)
+
+	}
+	if item.sellIn >= 0 && item.sellIn <= 5 {
+		item = quality(item, 3)
+
+	}
+	return Backstage{item: item}
+}
+
+func (bs Backstage) updateSellIn() Genre {
+	item := bs.item
+	item.sellIn = item.sellIn - 1
+	return Backstage{item: item}
+}
+
+func (bs Backstage) update() Item {
+	item := bs.item
+	if item.sellIn < 0 {
+		item.quality = item.quality - item.quality
+	}
+	return item
+}
+
+type Genre interface {
+	qualify() Genre
+	updateSellIn() Genre
+	update() Item
+}
+
+type Normal struct {
+	item Item
+}
+
+func (ab Normal) qualify() Genre {
+	item := ab.item
+	item = quality(item, -1)
+	return Normal{item: item}
+}
+
+func (ab Normal) updateSellIn() Genre {
+	item := ab.item
+	item.sellIn = item.sellIn - 1
+	return Normal{item: item}
+}
+
+func (ab Normal) update() Item {
+	item := ab.item
+	if item.sellIn < 0 {
+
+		item = quality(item, -1)
+	}
+	return item
+}
+
+func updateState(gn Genre) Item {
+	it := gn.qualify().updateSellIn().update()
+	return it
+}
+
+func GenreFactory(item Item) Genre {
+	switch item.name {
+	case "Aged Brie":
+		return AgedBrie{item: item}
+	case "Backstage passes to a TAFKAL80ETC concert":
+		return Backstage{item: item}
+	default:
+		return Normal{item: item}
+
+	}
+
+}
+
+func UpdateQuality(items []*Item) {
+	for i := 0; i < len(items); i++ {
+		item := items[i]
+
+		if item.name == "Sulfuras, Hand of Ragnaros" {
+			continue
+		}
+		it := updateState(GenreFactory(*item))
+		items[i] = &Item{
+			name:    it.name,
+			quality: it.quality,
+			sellIn:  it.sellIn,
+		}
+	}
 }
